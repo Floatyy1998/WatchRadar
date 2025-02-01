@@ -136,6 +136,12 @@ export function App() {
     setExpandedService(expandedService === service ? null : service);
   };
 
+  const uniqueServiceKey = (option: StreamingOption) => {
+    return option.addon
+      ? `${option.service.name}-${option.addon.name}`
+      : option.service.name;
+  };
+
   return (
     <main className='min-h-screen w-full bg-gray-900'>
       <div className='mx-auto p-6'>
@@ -148,7 +154,7 @@ export function App() {
               type='text'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder='Film oder Serie suchen...'
+              placeholder='Search for a show or movie...'
               className='w-full px-4 py-3 pl-12 rounded-lg border border-gray-700 bg-gray-800 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none placeholder-gray-400'
             />
             <Search
@@ -200,24 +206,15 @@ export function App() {
                         const uniqueServices = new Set<string>();
                         const filteredOptions = options.filter(
                           (option) =>
-                            !uniqueServices.has(
-                              option.addon
-                                ? `${option.service.name}-${option.addon.name}`
-                                : option.service.name
-                            ) &&
+                            !uniqueServices.has(uniqueServiceKey(option)) &&
                             option.type !== 'buy' &&
-                            (option.audios.length > 0 ||
-                              option.subtitles.length > 0)
+                            option.audios.length > 0
                         );
                         if (filteredOptions.length === 0) {
                           return null;
                         }
                         filteredOptions.forEach((option) => {
-                          uniqueServices.add(
-                            option.addon
-                              ? `${option.service.name}-${option.addon.name}`
-                              : option.service.name
-                          );
+                          uniqueServices.add(uniqueServiceKey(option));
                         });
                         const countryKey = `${result.id}-${country}`;
                         return (
@@ -261,17 +258,14 @@ export function App() {
                                   .filter(
                                     (option, index, self) =>
                                       index ===
-                                      self.findIndex((o) =>
-                                        o.addon
-                                          ? o.addon.name === option.addon?.name
-                                          : o.service.name ===
-                                            option.service.name
+                                      self.findIndex(
+                                        (o) =>
+                                          uniqueServiceKey(o) ===
+                                          uniqueServiceKey(option)
                                       )
                                   )
                                   .map((option) => {
-                                    const serviceKey = option.addon
-                                      ? `${option.service.name}-${option.addon.name}`
-                                      : option.service.name;
+                                    const serviceKey = uniqueServiceKey(option);
                                     return (
                                       <div
                                         key={serviceKey}
