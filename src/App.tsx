@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import * as streamingAvailability from 'streaming-availability';
 import { countryFlags, countryNames } from './countryData';
 
@@ -86,45 +86,58 @@ export function App() {
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const response = await client.showsApi.searchShowsByTitle({
-      title: searchQuery,
-      country: 'us',
-    });
+  const handleSearch = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!searchQuery) return;
+      const response = await client.showsApi.searchShowsByTitle({
+        title: searchQuery,
+        country: 'us',
+      });
 
-    const topResults = response.slice(0, 5);
+      const topResults = response.slice(0, 5);
 
-    const detailedResults: Show[] = await Promise.all(
-      topResults.map(async (item: streamingAvailability.Show) => {
-        const showDetails = await client.showsApi.getShow({ id: item.id });
-        return {
-          id: showDetails.id,
-          title: showDetails.title,
-          overview: showDetails.overview,
-          firstAirYear: showDetails.firstAirYear || 0,
-          lastAirYear: showDetails.lastAirYear || 0,
-          genres: showDetails.genres,
-          cast: showDetails.cast,
-          rating: showDetails.rating,
-          seasonCount: showDetails.seasonCount,
-          episodeCount: showDetails.episodeCount,
-          imageSet: showDetails.imageSet,
-          streamingOptions: showDetails.streamingOptions,
-          type: showDetails.showType,
-        };
-      })
-    );
+      const detailedResults: Show[] = await Promise.all(
+        topResults.map(async (item: streamingAvailability.Show) => {
+          const showDetails = await client.showsApi.getShow({ id: item.id });
+          return {
+            id: showDetails.id,
+            title: showDetails.title,
+            overview: showDetails.overview,
+            firstAirYear: showDetails.firstAirYear || 0,
+            lastAirYear: showDetails.lastAirYear || 0,
+            genres: showDetails.genres,
+            cast: showDetails.cast,
+            rating: showDetails.rating,
+            seasonCount: showDetails.seasonCount,
+            episodeCount: showDetails.episodeCount,
+            imageSet: showDetails.imageSet,
+            streamingOptions: showDetails.streamingOptions,
+            type: showDetails.showType,
+          };
+        })
+      );
 
-    setResults(
-      detailedResults.filter(
-        (show) => Object.keys(show.streamingOptions).length > 0
-      )
-    );
-    setShowResults(true);
-    setExpandedCountry(null);
-    setExpandedService(null);
-  };
+      setResults(
+        detailedResults.filter(
+          (show) => Object.keys(show.streamingOptions).length > 0
+        )
+      );
+      setShowResults(true);
+      setExpandedCountry(null);
+      setExpandedService(null);
+    },
+    [searchQuery]
+  );
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.get('query');
+    if (query) {
+      setSearchQuery(query);
+      handleSearch({ preventDefault: () => {} } as React.FormEvent);
+    }
+  }, [handleSearch]);
 
   const toggleCountry = (country: string, showId: string) => {
     const key = `${showId}-${country}`;
